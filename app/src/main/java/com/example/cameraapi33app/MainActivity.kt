@@ -52,7 +52,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.cameraXButton.setOnClickListener { startCameraX() }
-        binding.uploadButton.setOnClickListener {  }
     }
 
     private fun startCameraX() {
