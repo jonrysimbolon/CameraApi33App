@@ -75,7 +75,7 @@ class CameraActivity : AppCompatActivity() {
                     it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
 
-            //binding.previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
+            binding.previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
 
             val metrics = DisplayMetrics().also { binding.previewView.display.getRealMetrics(it) }
             Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
