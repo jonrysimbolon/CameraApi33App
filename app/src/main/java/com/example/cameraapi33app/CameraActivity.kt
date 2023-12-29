@@ -1,25 +1,40 @@
 package com.example.cameraapi33app
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
+import android.graphics.Rect
 import android.os.Bundle
+import android.util.DisplayMetrics
 import android.util.Log
+import android.util.Size
 import android.view.OrientationEventListener
 import android.view.Surface
+import android.view.View
 import android.view.WindowInsets
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import com.example.cameraapi33app.databinding.ActivityCameraBinding
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 class CameraActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCameraBinding
     private var cameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
     private var imageCapture: ImageCapture? = null
+    private lateinit var viewFinderRect: Rect
+    private lateinit var cameraExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,13 +42,26 @@ class CameraActivity : AppCompatActivity() {
         binding = ActivityCameraBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.captureImage.setOnClickListener { takePhoto() }
-    }
+        cameraExecutor = Executors.newSingleThreadExecutor()
 
-    public override fun onResume() {
-        super.onResume()
-        hideSystemUI()
-        startCamera()
+        binding.captureImage.setOnClickListener {
+            binding.captureImage.visibility = View.GONE
+            takePhoto()
+        }
+
+        binding.previewView.post {
+
+            hideSystemUI()
+            startCamera()
+
+            viewFinderRect = Rect(
+                binding.viewFinderWindow.left,
+                binding.viewFinderWindow.top,
+                binding.viewFinderWindow.right,
+                binding.viewFinderWindow.bottom
+            )
+            binding.viewFinderBackground.setViewFinderRect(viewFinderRect)
+        }
     }
 
     private fun startCamera() {
@@ -44,10 +72,20 @@ class CameraActivity : AppCompatActivity() {
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
+                    it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
 
-            imageCapture = ImageCapture.Builder().build()
+            //binding.previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
+
+            val metrics = DisplayMetrics().also { binding.previewView.display.getRealMetrics(it) }
+            Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
+
+            val screenAspectRatio = aspectRatio(metrics.widthPixels, metrics.heightPixels)
+            Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
+
+            imageCapture = ImageCapture.Builder()
+                .setTargetAspectRatio(screenAspectRatio)
+                .build()
 
             try {
                 cameraProvider.unbindAll()
@@ -57,6 +95,7 @@ class CameraActivity : AppCompatActivity() {
                     preview,
                     imageCapture
                 )
+                preview.setSurfaceProvider(binding.previewView.surfaceProvider)
 
             } catch (exc: Exception) {
                 Toast.makeText(
@@ -72,19 +111,42 @@ class CameraActivity : AppCompatActivity() {
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
 
-        val photoFile = createCustomTempFile(application)
+        var photoFile = createCustomTempFile(application)
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
         imageCapture.takePicture(
             outputOptions,
-            ContextCompat.getMainExecutor(this),
+            cameraExecutor,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val intent = Intent()
-                    intent.putExtra(EXTRA_CAMERAX_IMAGE, output.savedUri.toString())
-                    setResult(CAMERAX_RESULT, intent)
-                    finish()
+                    try {
+                        val outputUri = output.savedUri!!
+
+                        val bitmap: Bitmap =
+                            ImageDecoder.decodeBitmap(
+                                ImageDecoder.createSource(
+                                    contentResolver,
+                                    outputUri
+                                )
+                            )
+
+                        photoFile = createCustomTempFile(application)
+                        val cropped = cropImage(
+                            bitmap,
+                            Size(binding.previewView.width, binding.previewView.height),
+                            viewFinderRect
+                        )
+
+                        val newUri = storeImage(cropped, photoFile)
+
+                        val intent = Intent()
+                        intent.putExtra(EXTRA_CAMERAX_IMAGE, newUri.toString())
+                        setResult(CAMERAX_RESULT, intent)
+                        finish()
+                    }catch (e: Exception){
+                        e.printStackTrace()
+                    }
                 }
 
                 override fun onError(exc: ImageCaptureException) {
@@ -133,9 +195,24 @@ class CameraActivity : AppCompatActivity() {
         orientationEventListener.disable()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+    }
+
+    private fun aspectRatio(width: Int, height: Int): Int {
+        val previewRatio = max(width, height).toDouble() / min(width, height)
+        if (abs(previewRatio - RATIO_4_3_VALUE) <= abs(previewRatio - RATIO_16_9_VALUE)) {
+            return AspectRatio.RATIO_4_3
+        }
+        return AspectRatio.RATIO_16_9
+    }
+
     companion object {
         private const val TAG = "CameraActivity"
         const val EXTRA_CAMERAX_IMAGE = "CameraX Image"
         const val CAMERAX_RESULT = 200
+        private const val RATIO_4_3_VALUE = 4.0 / 3.0
+        private const val RATIO_16_9_VALUE = 16.0 / 9.0
     }
 }
