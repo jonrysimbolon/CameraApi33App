@@ -22,7 +22,11 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.example.cameraapi33app.databinding.ActivityCameraBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -75,7 +79,7 @@ class CameraActivity : AppCompatActivity() {
                     it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
 
-            binding.previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
+            //binding.previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
 
             val metrics = DisplayMetrics().also { binding.previewView.display.getRealMetrics(it) }
             Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
@@ -84,7 +88,7 @@ class CameraActivity : AppCompatActivity() {
             Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
 
             imageCapture = ImageCapture.Builder()
-                .setTargetAspectRatio(screenAspectRatio)
+                //.setTargetAspectRatio(screenAspectRatio)
                 .build()
 
             try {
@@ -121,29 +125,53 @@ class CameraActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
-                        val outputUri = output.savedUri!!
+                        lifecycleScope.launch {
+                            withContext(Dispatchers.IO){
+                                val outputUri = output.savedUri!!
+                                val bitmap: Bitmap =
+                                    ImageDecoder.decodeBitmap(
+                                        ImageDecoder.createSource(
+                                            contentResolver,
+                                            outputUri
+                                        )
+                                    )
 
-                        val bitmap: Bitmap =
-                            ImageDecoder.decodeBitmap(
-                                ImageDecoder.createSource(
-                                    contentResolver,
-                                    outputUri
+                                photoFile = createCustomTempFile(application)
+
+                                var width: Int
+                                var height: Int
+
+                                binding.previewView.apply {
+                                    width = this.width
+                                    height = this.height
+                                }
+
+                                /*bitmap.apply {
+                                    width = this.width
+                                    height = this.height
+                                }*/
+
+                                Log.e(TAG, "(previewView) width & height: ${binding.previewView.width} & ${binding.previewView.height}")
+                                Log.e(TAG, "(bitmap) width & height: ${bitmap.width} & ${bitmap.height}")
+
+                                val cropped = cropImage(
+                                    bitmap,
+                                    Size(width, height),
+                                    viewFinderRect
                                 )
-                            )
 
-                        photoFile = createCustomTempFile(application)
-                        val cropped = cropImage(
-                            bitmap,
-                            Size(binding.previewView.width, binding.previewView.height),
-                            viewFinderRect
-                        )
+                                val newUri = storeImage(cropped, photoFile)
 
-                        val newUri = storeImage(cropped, photoFile)
+                                Log.e(TAG, "photoFile: $photoFile")
 
-                        val intent = Intent()
-                        intent.putExtra(EXTRA_CAMERAX_IMAGE, newUri.toString())
-                        setResult(CAMERAX_RESULT, intent)
-                        finish()
+                                withContext(Dispatchers.Main){
+                                    val intent = Intent()
+                                    intent.putExtra(EXTRA_CAMERAX_IMAGE, newUri.toString())
+                                    setResult(CAMERAX_RESULT, intent)
+                                    finish()
+                                }
+                            }
+                        }
                     }catch (e: Exception){
                         e.printStackTrace()
                     }
