@@ -88,7 +88,7 @@ class CameraActivity : AppCompatActivity() {
             Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
 
             imageCapture = ImageCapture.Builder()
-                //.setTargetAspectRatio(screenAspectRatio)
+                .setTargetAspectRatio(screenAspectRatio)
                 .build()
 
             try {
@@ -146,13 +146,7 @@ class CameraActivity : AppCompatActivity() {
                                     height = this.height
                                 }
 
-                                /*bitmap.apply {
-                                    width = this.width
-                                    height = this.height
-                                }*/
-
                                 Log.e(TAG, "(previewView) width & height: ${binding.previewView.width} & ${binding.previewView.height}")
-                                Log.e(TAG, "(bitmap) width & height: ${bitmap.width} & ${bitmap.height}")
 
                                 val cropped = cropImage(
                                     bitmap,

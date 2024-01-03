@@ -54,10 +54,10 @@ fun Size.scaleAndCenterWithin(containingSize: Size): Rect {
     val left = (containingSize.width - scaledSize.width) / 2
     val top = (containingSize.height - scaledSize.height) / 2
     return Rect(
-            /* left */ left,
-            /* top */ top,
-            /* right */ left + scaledSize.width,
-            /* bottom */ top + scaledSize.height
+        /* left */ left,
+        /* top */ top,
+        /* right */ left + scaledSize.width,
+        /* bottom */ top + scaledSize.height
     )
 }
 
@@ -113,31 +113,52 @@ fun storeImage(image: Bitmap, photoFile: File): Uri {
  */
 fun cropImage(fullImage: Bitmap, previewSize: Size, cardFinder: Rect): Bitmap {
     require(
-            cardFinder.left >= 0 &&
-                    cardFinder.right <= previewSize.width &&
-                    cardFinder.top >= 0 &&
-                    cardFinder.bottom <= previewSize.height
+        cardFinder.left >= 0 &&
+                cardFinder.right <= previewSize.width &&
+                cardFinder.top >= 0 &&
+                cardFinder.bottom <= previewSize.height
     ) { "Card finder is outside preview image bounds" }
 
     // Scale the previewImage to match the fullImage
-    val scaledPreviewImage = previewSize.scaleAndCenterWithin(fullImage.size())
-    val previewScale = scaledPreviewImage.width().toFloat() / previewSize.width
+    /*val scaledPreviewImage = previewSize.scaleAndCenterWithin(fullImage.size())
+    val previewScale = scaledPreviewImage.width().toFloat() / previewSize.width*/
+
+    // Make rect from previewSize
+    val fullImageSizeRect = fullImage.size().toRect()
+    val previewScale = fullImage.size().width.toFloat() / previewSize.width
 
     // Scale the cardFinder to match the scaledPreviewImage
     val scaledCardFinder = Rect(
-            (cardFinder.left * previewScale).roundToInt(),
-            (cardFinder.top * previewScale).roundToInt(),
-            (cardFinder.right * previewScale).roundToInt(),
-            (cardFinder.bottom * previewScale).roundToInt()
+        (cardFinder.left * previewScale).roundToInt(),
+        (cardFinder.top * previewScale).roundToInt(),
+        (cardFinder.right * previewScale).roundToInt(),
+        (cardFinder.bottom * previewScale).roundToInt()
     )
 
     // Position the scaledCardFinder on the fullImage
     val cropRect = Rect(
-            max(0, scaledCardFinder.left + scaledPreviewImage.left),
-            max(0, scaledCardFinder.top + scaledPreviewImage.top),
-            min(fullImage.width, scaledCardFinder.right + scaledPreviewImage.left),
-            min(fullImage.height, scaledCardFinder.bottom + scaledPreviewImage.top)
+        max(0, scaledCardFinder.left + fullImageSizeRect.left),
+        max(0, scaledCardFinder.top + fullImageSizeRect.top),
+        min(fullImage.width, scaledCardFinder.right + fullImageSizeRect.left),
+        min(fullImage.height, scaledCardFinder.bottom + fullImageSizeRect.top)
     )
 
     return fullImage.crop(cropRect)
+}
+
+fun Size.toRect(): Rect {
+    val aspectRatio = width.toFloat() / height
+    val scaledSize = maxAspectRatioInSize(this, aspectRatio)
+
+    val left = (width - scaledSize.width) / 2
+    val top = (height - scaledSize.height) / 2
+    val right = width
+    val bottom = height
+
+    return Rect(
+        left,
+        top,
+        right,
+        bottom
+    )
 }
