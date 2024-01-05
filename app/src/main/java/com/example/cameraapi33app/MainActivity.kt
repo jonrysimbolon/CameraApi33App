@@ -69,7 +69,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun showImage() {
         currentImageUri?.let {
-            Log.d("Image URI", "showImage: $it")
+            Log.d("MainActivity", "showImage: $it")
+            val path = it.path
+            Log.e("MathActivity", "path: $path")
             binding.previewImageView.setImageURI(it)
         }
     }
