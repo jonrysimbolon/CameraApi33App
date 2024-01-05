@@ -21,7 +21,13 @@ const val TAG = "Image.kt"
  * crop bitmap based on given Rect
  */
 fun Bitmap.crop(crop: Rect): Bitmap {
-    require(crop.left < crop.right && crop.top < crop.bottom) { "Cannot use negative crop" }
+    require(crop.left < crop.right && crop.top < crop.bottom) {
+        "Cannot use negative crop\n" +
+                "left: ${crop.left}\n" +
+                "right: ${crop.right}\n" +
+                "top: ${crop.top}\n" +
+                "bottom: ${crop.bottom}"
+    }
     require(crop.left >= 0 && crop.top >= 0 && crop.bottom <= this.height && crop.right <= this.width) {
         "Crop is outside the bounds of the image"
     }
@@ -141,10 +147,10 @@ fun cropImage(fullImage: Bitmap, previewSize: Size, cardFinder: Rect): Bitmap {
 
     // Position the scaledCardFinder on the fullImage
     val cropRect = Rect(
-            max(0, scaledCardFinder.left + scaledPreviewImage.left),
-            max(0, scaledCardFinder.top + scaledPreviewImage.top),
-            min(fullImage.width, scaledCardFinder.right + scaledPreviewImage.left),
-            min(fullImage.height, scaledCardFinder.bottom + scaledPreviewImage.top)
+            max(0, scaledCardFinder.left),
+            max(0, scaledCardFinder.top - (2 * scaledCardFinder.left)),
+            min(fullImage.width, scaledCardFinder.right + (2 * scaledPreviewImage.left)),
+            min(fullImage.height, scaledCardFinder.bottom + scaledCardFinder.left)
     )
 
     return fullImage.crop(cropRect)
