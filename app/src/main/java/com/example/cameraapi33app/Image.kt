@@ -148,9 +148,9 @@ fun cropImage(fullImage: Bitmap, previewSize: Size, cardFinder: Rect): Bitmap {
     // Position the scaledCardFinder on the fullImage
     val cropRect = Rect(
             max(0, scaledCardFinder.left),
-            max(0, scaledCardFinder.top - (2 * scaledCardFinder.left)),
+            max(0, scaledCardFinder.top - (scaledPreviewImage.left + scaledCardFinder.left)),
             min(fullImage.width, scaledCardFinder.right + (2 * scaledPreviewImage.left)),
-            min(fullImage.height, scaledCardFinder.bottom + scaledCardFinder.left)
+            min(fullImage.height, scaledCardFinder.bottom)
     )
 
     return fullImage.crop(cropRect)
