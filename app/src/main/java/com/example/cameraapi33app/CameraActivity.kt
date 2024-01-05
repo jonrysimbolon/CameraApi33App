@@ -71,24 +71,30 @@ class CameraActivity : AppCompatActivity() {
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
+        val metrics = DisplayMetrics()
+        Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
+
+        val widthMetrics = metrics.widthPixels
+        val heightMetrics = metrics.heightPixels
+
+        val screenAspectRatio = aspectRatio(metrics.widthPixels, metrics.heightPixels)
+        Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
+
         cameraProviderFuture.addListener({
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
             val preview = Preview.Builder()
+                //.setTargetAspectRatio(screenAspectRatio)
                 .build()
                 .also {
                     it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
 
-            //binding.previewView.scaleType = PreviewView.ScaleType.FIT_CENTER
-
-            val metrics = DisplayMetrics().also { binding.previewView.display.getRealMetrics(it) }
-            Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
-
-            val screenAspectRatio = aspectRatio(metrics.widthPixels, metrics.heightPixels)
-            Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
+            binding.previewView.apply {
+                minimumWidth = widthMetrics
+                minimumHeight = heightMetrics
+            }
 
             imageCapture = ImageCapture.Builder()
-                //.setTargetAspectRatio(screenAspectRatio)
                 .build()
 
             try {

@@ -28,6 +28,8 @@ fun Bitmap.crop(crop: Rect): Bitmap {
     return Bitmap.createBitmap(this, crop.left, crop.top, crop.width(), crop.height())
 }
 
+
+
 /**
  * Get the size of a bitmap.
  */
@@ -117,7 +119,13 @@ fun cropImage(fullImage: Bitmap, previewSize: Size, cardFinder: Rect): Bitmap {
                     cardFinder.right <= previewSize.width &&
                     cardFinder.top >= 0 &&
                     cardFinder.bottom <= previewSize.height
-    ) { "Card finder is outside preview image bounds" }
+    ) {
+        "Card finder is outside preview image bounds\n" +
+                "left = ${cardFinder.left}\n" +
+                "right = ${cardFinder.right} !< width = ${previewSize.width}\n" +
+                "top = ${cardFinder.top}\n" +
+                "bottom = ${cardFinder.bottom} !< height = ${previewSize.height}"
+    }
 
     // Scale the previewImage to match the fullImage
     val scaledPreviewImage = previewSize.scaleAndCenterWithin(fullImage.size())
